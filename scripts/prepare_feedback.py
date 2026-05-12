@@ -40,7 +40,7 @@ DEFAULT_OUTPUT_DIR = REPO_ROOT / "qualibact_output_feedback"
 DEFAULT_MERGED_TSV = REPO_ROOT / "feedback_metadata.tsv.gz"
 
 REQUIRED_COLS = [
-    "Sample",
+    "sample",
     "N50",
     "number",
     "longest",
@@ -63,7 +63,7 @@ def _from_checkm2_only(checkm2_path: Path, species: str) -> pd.DataFrame:
     Completeness_Specific (all rows use the Specific Model). GC is fraction -> percent."""
     df = pd.read_csv(checkm2_path, sep="\t")
     out = pd.DataFrame({
-        "Sample": df["Name"].astype(str),
+        "sample": df["Name"].astype(str),
         "N50": df["Contig_N50"],
         "number": df["Total_Contigs"],
         "longest": df["Max_Contig_Length"],
@@ -124,7 +124,7 @@ def _from_campy(asm_path: Path, qual_path: Path, species: str, contig_col: str) 
             species, len(asm), len(qual), len(merged),
         )
     out = pd.DataFrame({
-        "Sample": merged["_key"],
+        "sample": merged["_key"],
         "N50": merged["N50"],                              # from assembly-stats
         "number": merged[contig_col],                      # No_contigs (coli) or number (jejuni)
         "longest": merged["longest"],
@@ -174,7 +174,7 @@ def build_merged(feedback_dir: Path) -> pd.DataFrame:
             raise FileNotFoundError(f"Group directory missing: {group_dir}")
         df = loader(group_dir)
         before = len(df)
-        df = df.dropna(subset=[c for c in REQUIRED_COLS if c not in ("Sample",)])
+        df = df.dropna(subset=[c for c in REQUIRED_COLS if c not in ("sample",)])
         log.info("%-32s %s rows=%d (dropped %d with NaN metrics)", species, rel, len(df), before - len(df))
         frames.append(df)
     merged = pd.concat(frames, ignore_index=True)
@@ -263,15 +263,16 @@ def prefetch_commensal_refseq(feedback_dir: Path, output_dir: Path, force: bool 
              len(combined_reports), cached_path)
 
 
-def write_dotenv(env_path: Path, merged_tsv: Path, output_dir: Path) -> None:
-    # Pin to the running interpreter so prepare's os.path.abspath(python_path) writes a real
-    # executable into the SLURM scripts (the default "python3" gets resolved against the
-    # repo root and produces a non-existent path). Same for the datasets binary.
+def write_dotenv(env_path: Path) -> None:
+    # The new CLI takes workdir + --input as positional/explicit args, so we no longer
+    # write QUALIBACT_MERGED_METADATA / QUALIBACT_OUTPUT_DIR here. The remaining vars
+    # are used by qualibact.prepare and qualibact.refseq at SLURM run time:
+    # - QUALIBACT_PYTHONPATH: prepare.py does os.path.abspath() on this when writing
+    #   the sbatch script; bare "python3" resolves to a nonexistent path in the repo root.
+    # - QUALIBACT_BIN: refseq.find_datasets_bin() looks here first for the datasets CLI.
     python_path = Path(sys.executable).resolve()
     bin_dir = (REPO_ROOT / "bin").resolve()
     env_path.write_text(
-        f"QUALIBACT_MERGED_METADATA={merged_tsv}\n"
-        f"QUALIBACT_OUTPUT_DIR={output_dir}\n"
         f"QUALIBACT_PYTHONPATH={python_path}\n"
         f"QUALIBACT_BIN={bin_dir}\n"
     )
@@ -280,6 +281,7 @@ def write_dotenv(env_path: Path, merged_tsv: Path, output_dir: Path) -> None:
 
 def run_qualibact(
     env_path: Path,
+    merged_tsv: Path,
     output_dir: Path,
     species_list: list[str],
     submit: bool,
@@ -290,9 +292,12 @@ def run_qualibact(
 
     prefetch_commensal_refseq(feedback_dir, output_dir)
 
-    log.info("Running prepare with %s", env_path)
+    # New CLI (post-merge with origin/main): prepare <workdir> --input <csv> [--submit]
+    log.info("Running prepare with workdir=%s input=%s", output_dir, merged_tsv)
     subprocess.run(
-        [python, str(runner), "prepare", "--dotenv-path", str(env_path)]
+        [python, str(runner), "prepare", str(output_dir),
+         "--input", str(merged_tsv),
+         "--dotenv-path", str(env_path)]
         + (["--submit"] if submit else []),
         check=True,
         cwd=str(REPO_ROOT),
@@ -429,11 +434,12 @@ def main() -> None:
     if args.build_only:
         return
 
-    write_dotenv(args.env_file, args.merged_tsv.resolve(), args.output_dir.resolve())
+    write_dotenv(args.env_file)
 
     if args.run or args.submit:
         run_qualibact(
             args.env_file,
+            args.merged_tsv.resolve(),
             args.output_dir.resolve(),
             species_list=[s for _, _, s in GROUPS],
             submit=args.submit,
