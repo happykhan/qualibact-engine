@@ -11,12 +11,10 @@ def prepare_qualibact_dataframes(workdir, metadata_path, submit=False):
     # Filter the inccorect species records.
     # Creat the final filtered dataframe
     # Retrieve refseq statistics
-    pq_table_path = os.path.join(workdir, "assembly_stats.parquet")
     os.makedirs(workdir, exist_ok=True)
     assembly_full_df, assembly_filtered_df = get_df(
-        pq_table_path=pq_table_path,
-        workdir=workdir,
-        metadata_path=metadata_path,
+        metadata_path,
+        workdir,
         min_genome_count=100,  # Minimum number of genomes per species
     )
     logging.info("Dataframe loaded with %d rows", len(assembly_filtered_df))

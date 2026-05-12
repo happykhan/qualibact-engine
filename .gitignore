@@ -1,10 +1,15 @@
 output_qualibact
 test_output/
-
+feedback/
+qualibact_output_feedback/
+qualibact_output/
+*.tsv.gz
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
 *$py.class
+CLAUDE.md
+.qualibact.* 
 
 # C extensions
 *.so
@@ -208,3 +213,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# pixi environments
+.pixi/*
+!.pixi/config.toml

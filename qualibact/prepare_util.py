@@ -15,16 +15,16 @@ def rename_species(name):
 
 
 def get_df(
-    pq_table_path,
-    workdir,
-    metadata_path,
+    tsv_table_path,
+    workdir,    
     min_genome_count=None,
     species_list=None,
     force=False,
 ):
-    filtered_file = os.path.join(workdir, "assembly_stats_filtered.parquet")
+    filtered_file = os.path.join(workdir, "metadata_filtered.parquet")
+    pq_table_path = os.path.join(workdir, "metadata.parquet")
     if not os.path.exists(pq_table_path) or force or not os.path.exists(filtered_file):
-        full_df = create_full_df(metadata_path)
+        full_df = create_full_df(tsv_table_path)
         full_df, full_df_filtered = filter_assembly_data(
             full_df, min_genome_count, species_list
         )
@@ -32,7 +32,7 @@ def get_df(
         full_df.to_parquet(pq_table_path, index=False)
         logging.info("Parquet file created at %s", pq_table_path)
         full_df_filtered.to_parquet(
-            os.path.join(workdir, "assembly_stats_filtered.parquet"), index=False
+            os.path.join(workdir, "metadata_filtered.parquet"), index=False
         )
         # Create a table of species and their counts for full_df
         species_counts = full_df["species_sylph"].value_counts().reset_index()
@@ -92,88 +92,34 @@ def filter_assembly_data(assembly_stats, min_genome_count=None, species_list=Non
         assembly_stats_filtered = assembly_stats.copy()
     return assembly_stats, assembly_stats_filtered
 
+from qualibact.species_run import METRICS_LIST
 
 def create_full_df(
-    workdir, gc_content_file="/well/aanensen/shared/atb/gc/merged_gc_results.tsv.gz"
+    tsv_table_path
 ):
-    assembly_stats_path = os.path.join(workdir, "assembly-stats.tsv.gz")
-    checkm_path = os.path.join(workdir, "checkm2.tsv.gz")
-    sylph_path = os.path.join(workdir, "sylph.tsv.gz")
-    file_list_path = os.path.join(workdir, "file_list.all.latest.tsv.gz")
-    # Check these files exist
-    if (
-        not os.path.exists(assembly_stats_path)
-        or not os.path.exists(checkm_path)
-        or not os.path.exists(sylph_path)
-    ):
-        # print a file locations
+    # Check the file exists
+    if not os.path.exists(tsv_table_path):
         logging.error(
-            "Required files not found in the metadata path. "
-            "Checked paths:\n"
-            "  assembly_stats_path: %s\n"
-            "  checkm_path: %s\n"
-            "  sylph_path: %s\n"
-            "Please ensure that assembly_stats.tsv.gz, checkm2.tsv.gz, and sylph.tsv.gz are present.",
-            assembly_stats_path,
-            checkm_path,
-            sylph_path,
+            "Required file not found: %s\n"
+            "Please ensure that the merged table is present.",
+            tsv_table_path,
         )
         raise FileNotFoundError(
-            "Required files not found in the metadata path. Please ensure that assembly_stats.tsv.gz, "
-            "checkm2.tsv.gz, and sylph.tsv.gz are present."
+            f"Required file not found: {tsv_table_path}"
         )
 
-    assembly_stats = None
-    # Read the extracted file list
-    with gzip.open(file_list_path, "rt") as f:
-        file_list = pd.read_csv(f, sep="\t")
-    with gzip.open(checkm_path, "rt") as f:
-        checkm_stats = pd.read_csv(f, sep="\t")
-    with gzip.open(assembly_stats_path, "rt") as f:
-        assembly_stats = pd.read_csv(f, sep="\t")
+    # Load the TSV into a dataframe
+    if tsv_table_path.endswith(".gz"):
+        assembly_stats = pd.read_csv(tsv_table_path, sep="\t", compression="gzip")
+    else:
+        assembly_stats = pd.read_csv(tsv_table_path, sep="\t")
 
-    # Merge assembly_stats with file_list on 'sample'
-    assembly_stats = assembly_stats.merge(
-        file_list[["sample", "species_sylph"]], on="sample", how="left"
-    )
-
-    # Merge with checkm_stats on 'sample' (left) and 'Sample' (right)
-    assembly_stats = assembly_stats.merge(
-        checkm_stats[
-            [
-                "Sample",
-                "GC_Content",
-                "Completeness_Specific",
-                "Contamination",
-                "Contig_N50",
-                "Total_Coding_Sequences",
-                "Genome_Size",
-            ]
-        ],
-        left_on="sample",
-        right_on="Sample",
-        how="left",
-    )
-    # Need to replace GC_Content with the GC content file  in gc_content_file. Merge on 'Sample'
-    if os.path.exists(gc_content_file):
-        with gzip.open(gc_content_file, "rt") as f:
-            gc_content = pd.read_csv(f, sep="\t")
-        # Merge with gc_content on 'Sample'
-        # if gc_content column is GC_conent, rename it to GC_Content
-        if "GC_content" in gc_content.columns:
-            gc_content.rename(columns={"GC_content": "GC_Content"}, inplace=True)
-        # Divide the GC_Content by 100 to convert it to a percentage
-        if "GC_Content" in gc_content.columns:
-            gc_content["GC_Content"] = gc_content["GC_Content"] / 100.0
-        assembly_stats = assembly_stats.merge(
-            gc_content[["Sample", "GC_Content"]],
-            on="Sample",
-            how="left",
-            suffixes=("", "_gc"),
+    # Check that all required columns are present
+    missing_cols = [col for col in METRICS_LIST if col not in assembly_stats.columns]
+    if missing_cols:
+        raise ValueError(
+            f"Missing required columns in {tsv_table_path}: {missing_cols}. "
+            f"Expected columns: {METRICS_LIST}"
         )
-        # Drop the old GC_Content column
-        assembly_stats.drop(columns=["GC_Content"], inplace=True)
-        # Rename the new GC_Content column
-        assembly_stats.rename(columns={"GC_Content_gc": "GC_Content"}, inplace=True)
 
     return assembly_stats

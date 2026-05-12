@@ -25,8 +25,8 @@ def prepare(dotenv_path: str = ".qualibact.env", submit: bool = False):
     load_environment(dotenv_path)
     logging.info("Environment loaded and logging set up.")
     typer.echo("Preparing qualibact dataframes...")
-    metadata_path = os.environ["GENOMEQC_ATB_METADATA"]
-    GENOMEQC_OUTPUT_DIR = os.environ["GENOMEQC_OUTPUT_DIR"]
+    metadata_path = os.environ["QUALIBACT_MERGED_METADATA"]
+    GENOMEQC_OUTPUT_DIR = os.environ["QUALIBACT_OUTPUT_DIR"]
     prepare_qualibact_dataframes(
         metadata_path=metadata_path, workdir=GENOMEQC_OUTPUT_DIR, submit=submit
     )
