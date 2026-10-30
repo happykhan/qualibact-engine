@@ -1,0 +1,10 @@
+species,tier,scheme,source_url
+Serratia_nevei,pass,qualibact-v1.0,https://static.qualibact.org/static/species/Serratia_nevei/qualibact-v1.0/Serratia_nevei_atb_pass.csv.gz
+Serratia_nevei,warn,qualibact-v1.0,https://static.qualibact.org/static/species/Serratia_nevei/qualibact-v1.0/Serratia_nevei_atb_warn.csv.gz
+Serratia_nevei,fail,qualibact-v1.0,https://static.qualibact.org/static/species/Serratia_nevei/qualibact-v1.0/Serratia_nevei_atb_fail.csv.gz
+Serratia_ureilytica,pass,qualibact-v1.0,https://static.qualibact.org/static/species/Serratia_ureilytica/qualibact-v1.0/Serratia_ureilytica_atb_pass.csv.gz
+Serratia_ureilytica,warn,qualibact-v1.0,https://static.qualibact.org/static/species/Serratia_ureilytica/qualibact-v1.0/Serratia_ureilytica_atb_warn.csv.gz
+Serratia_ureilytica,fail,qualibact-v1.0,https://static.qualibact.org/static/species/Serratia_ureilytica/qualibact-v1.0/Serratia_ureilytica_atb_fail.csv.gz
+Staphylococcus_coagulans,pass,qualibact-v1.0,https://static.qualibact.org/static/species/Staphylococcus_coagulans/qualibact-v1.0/Staphylococcus_coagulans_atb_pass.csv.gz
+Staphylococcus_coagulans,warn,qualibact-v1.0,https://static.qualibact.org/static/species/Staphylococcus_coagulans/qualibact-v1.0/Staphylococcus_coagulans_atb_warn.csv.gz
+Staphylococcus_coagulans,fail,qualibact-v1.0,https://static.qualibact.org/static/species/Staphylococcus_coagulans/qualibact-v1.0/Staphylococcus_coagulans_atb_fail.csv.gz
