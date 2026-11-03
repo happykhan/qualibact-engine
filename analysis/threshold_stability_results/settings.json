@@ -1,0 +1,25 @@
+{
+  "species": [
+    "Serratia_nevei",
+    "Serratia_ureilytica",
+    "Staphylococcus_coagulans"
+  ],
+  "replicates": 200,
+  "seed": 20261030,
+  "isolation_forest_random_state": 42,
+  "isolation_forest_features": [
+    "total_length",
+    "GC_Content",
+    "N50",
+    "number",
+    "longest",
+    "Completeness_Specific",
+    "Contamination"
+  ],
+  "quantiles": {
+    "N50_lower": 0.005,
+    "contig_count_upper": 0.995
+  },
+  "folds": 5,
+  "interpretation": "Descriptive assembly resampling ranges, not lineage-aware confidence intervals."
+}
